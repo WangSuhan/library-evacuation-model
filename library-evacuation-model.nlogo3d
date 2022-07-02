@@ -1,0 +1,1841 @@
+globals
+[
+  interval
+  wall-color
+lx ly rx ry
+  infinite
+  alist
+  move-speed
+  canmove?
+  nu-floor2
+  nu-floor3
+  nu-floor4
+]
+patches-own[
+  elevation
+  elevation1
+  elevation2
+  altitude
+  path
+]
+turtles-own[
+  outdoor?
+  moved?
+  totalfd
+  totalfd1
+  totalfd2
+  totalfd3
+  totalfd4
+  down?
+  inside-stair?
+  lm?
+  ll?
+]
+to setup
+  ca
+  ;;===================================
+  ;;==========将楼层设为白色=============
+  ;;===================================
+  set infinite 9999999
+  set interval (world-depth - 1) / 4
+  set wall-color blue
+  ask turtles[
+  set lm? false
+    set ll? false]
+  setup-floor
+  ;;========================
+  ;;====设置出口============
+  ;;=======================
+  ;;此处分别控制楼道、正门口、阅览室门口的宽度
+  setup-exit
+   ;;=============================
+  ;;====分区域上色================
+  ;;==============================
+  setup-color
+  ;;===========================
+  ;;============楼梯===========
+  ;;===========================
+  setup-stair
+  ;;========================================
+  ;;==========标记楼梯口颜色为===========
+  ;;========================================
+  setup-stair-color
+   ;;============================
+ ;;========添加障碍物===========
+ ;;=============================
+  setup-barrier
+  ;;=========================
+  ;;======设置人口============
+  ;;==========================
+  setup-population
+  ;;==========================
+  ;;=========计算距离===========
+  ;;==========================
+  calculate-dis
+  ;;==========================
+  ;;=====选择疏散使用的楼梯====
+  ;;==========================
+  ;choose-stair
+  reset-ticks
+end
+
+
+to go
+  ;if ticks = 900 [stop]
+  if count turtles > 0 [set move-speed count turtles with [moved? = true] / count turtles]
+  ask patches with [pcolor = pink and pzcor = 0][ask turtles-here [die]]
+  if count turtles = 0 [stop]
+  ask turtles
+  [
+    if(down? and (pzcor <= 3 * interval and pzcor > interval) and inside-stair?)
+    [next-stair1]
+    if(down? and (pzcor <= interval) and  inside-stair?)[next-stair2]
+    if (down? and not(pzcor = 0)and not inside-stair?)[down-stair]
+  ]
+  ;;=====================
+  ;;=====================
+  ;;====在楼层上运动======
+  ;;=====================
+  ;;=====================
+  set nu-floor4 count turtles with [pxcor > 60 and pxcor < 79 and pycor < 43 and pycor > 33 and pzcor = 60]
+  set nu-floor3 count turtles with [pxcor > 60 and pxcor < 79 and pycor < 43 and pycor > 33 and pzcor = 40]
+  set nu-floor2 count turtles with [pxcor > 60 and pxcor < 79 and pycor < 43 and pycor > 33 and pzcor = 20]
+  ;;教室外运动
+
+  ;ask turtles
+  ;[
+  ;if lm? = true and ll? = false
+  ;[run-outdoor-lm]
+  ;if lm? = false and ll? = true
+  ;[run-outdoor-ll]
+  ;;if lm? = false and ll? = false
+  ;[run-outdoor]
+  ;]
+  run-outdoor
+  ;;教室内运动
+  run-indoor
+  ;if Show_path? [ask patches with [pcolor = white ][let thecolor (9.9 - (path * 0.3)) if thecolor < 0.001 [set thecolor 0.001] set pcolor thecolor]]
+  tick
+end
+to move
+  move-to one-of patches with [pcolor = red]
+end
+to run-outdoor
+  let i 0
+  while[i <= 3]
+  [
+  ask turtles with [pzcor = i * interval and (pcolor = white or pcolor = red or pcolor = green or pcolor = cyan or pcolor = orange or pcolor = turquoise)]
+    [
+    set moved? false
+    let target min-one-of neighbors with [pzcor = i * interval] [ elevation + ( count turtles-here * infinite) ]
+
+    if [elevation + (count turtles-here * infinite)] of target < [elevation] of patch-here
+    [ face target
+      move-to target
+      set moved? true
+      ask target [set path path + 1]
+    ]
+      if pcolor = pink [set down? true]
+   ]
+    set i i + 1
+  ]
+end
+to run-outdoor-lm
+  let i 0
+  while[i <= 3]
+  [
+  ask turtles with [pzcor = i * interval and (pcolor = white or pcolor = red or pcolor = green or pcolor = cyan or pcolor = orange or pcolor = turquoise)]
+    [
+    set moved? false
+    let target min-one-of neighbors with [pzcor = i * interval] [ elevation1 + ( count turtles-here * infinite) ]
+
+    if [elevation1 + (count turtles-here * infinite)] of target < [elevation1] of patch-here
+    [ face target
+      move-to target
+      set moved? true
+      ask target [set path path + 1]
+    ]
+      if pcolor = pink [set down? true]
+   ]
+    set i i + 1
+  ]
+end
+to run-outdoor-ll
+  let i 0
+  while[i <= 3]
+  [
+  ask turtles with [pzcor = i * interval and (pcolor = white or pcolor = red or pcolor = green or pcolor = cyan or pcolor = orange or pcolor = turquoise)]
+    [
+    set moved? false
+    let target min-one-of neighbors with [pzcor = i * interval] [ elevation2 + ( count turtles-here * infinite) ]
+
+    if [elevation2 + (count turtles-here * infinite)] of target < [elevation2] of patch-here
+    [ face target
+      move-to target
+      set moved? true
+      ask target [set path path + 1]
+    ]
+      if pcolor = pink [set down? true]
+   ]
+    set i i + 1
+  ]
+end
+to run-indoor
+  let i 0
+  while[i <= 3]
+  [
+  ask turtles with [pzcor = i * interval and (pcolor = yellow or pcolor = brown or pcolor = violet or pcolor = lime or pcolor = magenta)]
+    [
+    set moved? false
+    let target min-one-of neighbors with [pzcor = i * interval] [ altitude + ( count turtles-here * infinite) ]
+
+    if [altitude + (count turtles-here * infinite)] of target < [altitude] of patch-here
+    [ face target
+      move-to target
+      set moved? true
+      ask target [set path path + 1]
+    ]
+      ifelse pcolor = green and pycor = round(0.56 * world-height) [set inside-stair? true ][if pcolor = green and not (pycor = round(0.56 * world-height)) [set down? true]]
+      ifelse pcolor = red and pxcor = round(0.81 * world-width) [set inside-stair? true ][if pcolor = red and not (pxcor = round(0.81 * world-width)) [set down? true]]
+      if pcolor = cyan [set inside-stair? true ]
+      if pcolor = orange [set inside-stair? true ]
+      if pcolor = turquoise [set inside-stair? true ]
+   ]
+    set i i + 1
+  ]
+end
+;;=======================
+;;=======下楼============
+;;=======================
+;;内部楼梯适用
+to next-stair1
+  if totalfd3 = 0
+  [set heading -90
+    set pitch -45]
+    ask patch-right-and-ahead 0 1.4
+    [if count turtles-here <= admission [set canmove? true]]
+    if canmove?
+    [fd  0.9 / 5 * sqrt 2
+        set totalfd3 totalfd3 +  1 set canmove? false]
+   if totalfd3 = round(interval * 5 / 0.9)  [set down? false set totalfd3 0 set pitch 0  lt 90 fd 5]
+end
+to next-stair2
+  if totalfd4 = 0
+  [set heading 180
+    set pitch -45]
+    ask patch-right-and-ahead 0 1.4
+    [if count turtles-here <= admission [set canmove? true]]
+    if canmove?
+    [fd  down-stair-speed / 5 * sqrt 2
+        set totalfd4 totalfd4 +  1 set canmove? false]
+   if totalfd4 = round(interval * 5 / down-stair-speed)  [set down? false set totalfd4 0 set pitch 0  lt 90 fd 5]
+end
+;;外部楼梯适用
+to down-stair
+  ifelse pycor < round(0.5 * world-height)
+  [ifelse  totalfd1 < round(interval / 2 * 5 / down-stair-speed) ;;左下楼梯适用
+   [ set heading 90
+  set pitch -45
+  ask patch-right-and-ahead 0 1.4
+   [if count turtles-here <= admission [set canmove? true]]
+    if canmove?
+    [fd  down-stair-speed / 5 * sqrt 2
+        set totalfd1 totalfd1 +  1 set canmove? false]
+    ]
+    [if totalfd2 = 0
+    [ set pitch 0 rt 90  fd 2 rt 90 set pitch -45]
+      ask patch-right-and-ahead 0 1.4
+   [if count turtles-here <= admission [set canmove? true]]
+    if canmove?
+    [fd  down-stair-speed / 5 * sqrt 2
+        set totalfd2 totalfd2 +  1 set canmove? false]
+      if totalfd2 = round(interval / 2 * 5 / down-stair-speed)  [set down? false set totalfd1 0 set totalfd2 0 set pitch 0]
+    ]
+  ]
+  [ifelse  totalfd1 < round(interval / 2 * 5 / down-stair-speed) ;;其余楼梯适用
+   [ set heading -90
+  set pitch -45
+  ask patch-right-and-ahead 0 1.4
+   [if count turtles-here <= admission [set canmove? true]]
+    if canmove?
+    [fd  down-stair-speed / 5 * sqrt 2
+        set totalfd1 totalfd1 +  1 set canmove? false]
+    ]
+    [if totalfd2 = 0
+    [ set pitch 0 rt 90  fd 2 rt 90 set pitch -45]
+      ask patch-right-and-ahead 0 1.4
+   [if count turtles-here <= admission [set canmove? true]]
+    if canmove?
+    [fd  down-stair-speed / 5 * sqrt 2
+        set totalfd2 totalfd2 +  1 set canmove? false]
+      if totalfd2 = round(interval / 2 * 5 / down-stair-speed)  [set down? false set totalfd1 0 set totalfd2 0 set pitch 0]
+    ]
+  ]
+end
+
+;;交叉式楼梯
+to produce-stairs[lxcor rxcor lycor rycor]
+  ask patches with [pxcor < lxcor and pxcor > rxcor and pycor < lycor and pycor > rycor] [set pcolor 0]
+  ifelse (rxcor - lxcor) > (rycor - lycor)
+  [set lx lxcor set rx rxcor set ly lycor set ry rycor]
+  [set lx lycor set rx rycor set ly lxcor set ry rxcor]
+  let i 0
+  while [i < 4]
+  [
+    let j 1
+    while[j <= interval / 2]
+    [
+    ask patches with [pycor < ly and pycor > ry and pzcor = i * interval + j and pxcor = rx - j]
+    [set pcolor white]
+    ask patches with [pycor < ly and pycor > ry and pzcor = i * interval + j and pxcor = lx + j]
+    [set pcolor white]
+      set j j + 1
+    ]
+    ask patches with [pxcor >= lx - 2 and pxcor <= lx and pycor >= ly and pycor <= ry and pzcor = i * interval / 2]
+    [set pcolor white]
+    set i i + 1
+  ]
+end
+to setup-floor
+   let i 0
+  while [i < 4]
+  [
+    ask patches with [pzcor = interval * i ]
+    [set pcolor white]
+    set i i + 1
+  ]
+  ask patches with [pxcor >= round(0.35 * world-width) and pxcor < round ((1 - 0.19)* world-width) and pycor > round(0.43 * world-height) ]
+  [set pcolor 0]
+  ask patches with [pxcor < round(0.07 * world-width)and pycor < round(0.51 * world-height)]
+  [set pcolor 0]
+  ask patches with [pxcor > round(0.48 * world-width)and pxcor < round(0.78 * world-width)and pycor > round(0.08 * world-height)and pycor < round(0.32 * world-height) and pzcor > 0]
+  [set pcolor 0]
+  ask patches with [ pxcor <= round(0.48 * world-width) and pxcor >= (2.5 / 9.3 * world-width) and pycor > round(0.6 / 9.9 * world-height) and pycor < round(0.32 * world-height) and (pzcor = 3 * interval or pzcor = 2 * interval or pzcor = interval)]
+  [set pcolor 0]
+  ask patches with [pxcor > round(0.5 * world-width)and pxcor < (0.78 * world-width) and pycor < round(0.32 * world-height)and pycor > round(0.05 * world-height)and pzcor = 0]
+  [set pcolor 0]
+  ;; 设置阅览室
+  ask patches with [pxcor = round ((1 - 0.19)* world-width) and pzcor >= interval]
+  [set pcolor wall-color]
+  ask patches with [pycor = round(0.5 / 9.9 * world-height)  and pxcor < round ((1 - 0.19)* world-width)and pxcor >= (0.25 * world-width) and pzcor >= interval]
+  [set pcolor wall-color]
+  ask patches with [pycor = round (0.1 * world-height) and pxcor <= round(0.23 * world-width) and pxcor >= round(0.07 * world-width) ]
+  [set pcolor wall-color]
+  ask patches with [pxcor = round (0.81 * world-width) and pycor >= round(0.56 * world-height) and pzcor < interval]
+  [set pcolor wall-color]
+  ask patches with [pycor < round(0.32 * world-height) and pxcor = round(0.78 * world-width)and pzcor < interval]
+  [set pcolor wall-color]
+  ask patches with [pxcor > round(0.78 * world-width)and pycor = round(0.32 * world-height) and pzcor < interval]
+  [set pcolor wall-color]
+  ;;密集书库
+  ;ask patches with [pycor = round(0.44 * world-height) and  pxcor < round ((1 - 0.19)* world-width) and pxcor > round(0.35 * world-width)]
+  ;[set pcolor wall-color]
+  ask patches with [pycor = round(0.51 * world-height) and pxcor <= round(0.23 * world-width)]
+  [set pcolor wall-color]
+  ask patches with [pycor = round(0.56 * world-height) and  pxcor < round (0.35 * world-width)]
+  [set pcolor wall-color]
+  ask patches with [pxcor = round(0.35 * world-width) and pycor >= round(0.43 * world-height) ]
+  [set pcolor wall-color]
+  ask patches with [pxcor = round(0.23 * world-width) and pycor <= round(0.51 * world-height)]
+  [set pcolor wall-color]
+  ;;
+  ask patches with [pycor = round(0.32 * world-height)and pxcor < round ((1 - 0.19)* world-width) and pxcor > round(0.48 * world-width)]
+  [set pcolor wall-color]
+  ask patches with [pxcor > round(0.48 * world-width)and pxcor < round(0.78 * world-width)and pzcor <= interval and pycor = round(0.6 / 9.9 * world-height) ]
+  [set pcolor wall-color]
+  ask patches with [pxcor = round(0.48 * world-width)and pzcor < interval and pycor < round(0.6 / 9.9 * world-height)]
+  [set pcolor wall-color]
+  ask patches with [pxcor < round ((1 - 0.19)* world-width)and pxcor > round (0.35 * world-width) and pycor = round(0.51 * world-height)]
+  [set pcolor 0]
+  ask patches with [pycor < round(0.32 * world-height) and pycor > round(0.6 / 9.9 * world-height)and pxcor = round(0.5 * world-width) and pzcor <= interval]
+  [set pcolor wall-color]
+  ;;设置小房间
+  set i 1
+  while[i <= 5]
+  [
+  ask patches with [pycor <= round(0.05 * world-height)and pxcor = round (0.81 * world-width) - i * round(0.08 * world-width)and pzcor < 2 * interval and pzcor >= interval];;f2
+  [set pcolor wall-color]
+  set i i + 1
+  ]
+  ask patches with [pycor <= round(0.05 * world-width)and pxcor = round((0.23 + 0.25)/ 2 * world-width) + interval / 2 + 2 and pzcor >= 2 * interval and pzcor < 3 * interval];;f3
+  [set pcolor wall-color]
+  ask patches with [pycor <= round(0.05 * world-height)and pxcor = round (0.81 * world-width) -  round(0.25 * world-width)and pzcor < 4 * interval and pzcor >= 3 * interval];;f4
+  [set pcolor wall-color]
+  set i 1
+  while [i <= 2]
+  [
+  ask patches with [pycor <= round(0.05 * world-height)and pxcor = round (0.81 * world-width) - i * round(0.08 * world-width) -  round(0.25 * world-width)and pzcor < 4 * interval and pzcor >= 3 * interval]
+  [set pcolor wall-color]
+    set i i + 1
+  ]
+end
+to setup-exit
+  let righter round(reading-room-width / 2)
+  let lefter  righter - reading-room-width
+  let middle1 round((round(0.39 * world-height) + round(0.32 * world-height))/ 2)
+  ask patches with [pxcor = round ((1 - 0.19)* world-width)and pycor < middle1 + righter and pycor > middle1 + lefter and pzcor >= interval];;阅览室
+  [set pcolor 0]
+  ask patches with [pxcor < round(0.35 * world-width)and pxcor > round(0.23 * world-width) and pycor = round(0.51 * world-height)]
+  [set pcolor 0]
+  ask patches with [pycor = round(0.32 * world-height)and pxcor < (2.5 / 9.3 * world-width)and pxcor > round(0.23 * world-width)]
+  [set pcolor 0]
+  ask patches with [pycor = round(0.56 * world-height)and pxcor < round (0.35 / 2 * world-width) + 2 and pxcor > round (0.35 / 2 * world-width) - 2]
+  [set pcolor 0]
+  ;;二楼小房间门口
+  let i 0
+  while[i <= 5]
+  [
+    ask patches with [pycor = round(0.5 / 9.9 * world-height) and pxcor >= round(0.35 * world-width) + i * round(0.08 * world-width) and pxcor <= round(0.36 * world-width) + i * round(0.08 * world-width)and pzcor > interval and pzcor < 2 * interval]
+    [set pcolor 0]
+    set i i + 1
+  ]
+  set i 0
+  while[i <= 5]
+  [
+    ask patches with [pycor = round(0.5 / 9.9 * world-height) and pxcor >= round(0.35 * world-width) + i * round(0.08 * world-width) and pxcor <= round(0.36 * world-width) + i * round(0.08 * world-width)and pzcor = interval]
+    [set pcolor turquoise]
+    set i i + 1
+  ]
+  ;;三楼出口
+  ask patches with [pxcor > round((0.23 + 0.25)/ 2 * world-width) + interval / 2 + 2 and pxcor <= round((0.23 + 0.25)/ 2 * world-width) + interval / 2 + 4 and  pycor = round(0.05 * world-height)and pzcor < 3 * interval and pzcor > 2 * interval]
+  [set pcolor 0]
+  ask patches with [pxcor > round((0.23 + 0.25)/ 2 * world-width) + interval / 2 + 2 and pxcor <= round((0.23 + 0.25)/ 2 * world-width) + interval / 2 + 4 and  pycor = round(0.05 * world-height)and  pzcor = 2 * interval]
+  [set pcolor turquoise]
+  ;;四楼出口
+  ask patches with [ pycor = round(0.05 * world-height) and pxcor > round (0.81 * world-width) -  round(0.23 * world-width)and pxcor <= round (0.81 * world-width) -  round(0.21 * world-width) and pzcor < 4 * interval and pzcor > 3 * interval];;f4
+  [set pcolor 0]
+   ask patches with [ pycor = round(0.05 * world-height) and pxcor > round (0.81 * world-width) -  round(0.23 * world-width)and pxcor <= round (0.81 * world-width) -  round(0.21 * world-width) and  pzcor = 3 * interval];;f4
+  [set pcolor turquoise]
+  set i 0
+  while[i <= 2]
+  [
+    ask patches with [pycor = round(0.05 * world-height)and pxcor >= round(0.35 * world-width) + i * round(0.08 * world-width) and pxcor <= round(0.36 * world-width) + i * round(0.08 * world-width) and pzcor < 4 * interval and pzcor >= 3 * interval]
+    [set pcolor 0]
+    set i i + 1
+  ]
+  set i 0
+  while[i <= 2]
+  [
+    ask patches with [pycor = round(0.05 * world-height)and pxcor >= round(0.35 * world-width) + i * round(0.08 * world-width) and pxcor <= round(0.36 * world-width) + i * round(0.08 * world-width) and  pzcor = 3 * interval]
+    [set pcolor turquoise]
+    set i i + 1
+  ]
+  ask patches with [pxcor = round(0.23 * world-width)and pycor > round(0.05 * world-height) and pycor <= round(0.08 * world-height)]
+  [set pcolor 0]
+  ask patches with [pxcor = round(0.23 * world-width) and pycor >= round(0.34 * world-height) and pycor <= round(0.36 * world-height)]
+  [set pcolor 0]
+  if exit2?
+  [
+  set lefter round(exit-width2 / 2)
+  set righter round(exit-width2 / 2) - exit-width2
+  ask patches with [pxcor = round(0.35 * world-width) and pycor > round(0.49 * world-height) + righter and pycor < round(0.49 * world-height) + lefter and pzcor < interval]
+  [set pcolor 0]
+  ask patches with [pxcor = round(0.35 * world-width) and pycor > round(0.49 * world-height) + righter and pycor < round(0.49 * world-height) + lefter and pzcor = 0]
+  [set pcolor pink]
+  ]
+end
+to setup-color
+  let righter round(reading-room-width / 2)
+  let lefter  righter - reading-room-width
+  let middle1 round((round(0.39 * world-height) + round(0.32 * world-height))/ 2)
+  ask patches with [pxcor > round(0.81 * world-width)and (pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)]
+  [set pcolor yellow]
+  ask patches with [pxcor = round(0.81 * world-width) and pycor < middle1 + righter and pycor > middle1 + lefter and (pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)]
+  [set pcolor red]
+  ask patches with [pycor = round(0.32 * world-height)and pxcor < (2.5 / 9.3 * world-width)and pxcor > round(0.23 * world-width) and (pzcor = 0 or pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)]
+  [set pcolor white]
+  ask patches with [pxcor < round(0.35 * world-width)and pxcor > round(0.23 * world-width) and pycor = round(0.51 * world-height)and(pzcor = 0 or pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)]
+  [set pcolor white]
+  ask patches with [pycor > round(0.56 * world-height) and pxcor < (0.34 * world-width)and (pzcor = 0 or pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)]
+  [set pcolor brown]
+  ask patches with [pycor = round(0.56 * world-height)and pxcor < round (0.35 / 2 * world-width) + 2 and pxcor > round (0.35 / 2 * world-width) - 2 and(pzcor = 0 or pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)]
+  [set pcolor green]
+  ask patches with [pycor > round (0.1 * world-height) and pycor < round (0.51 * world-height) and pxcor <= round(0.23 * world-width) and pxcor >= round(0.07 * world-width)and (pzcor = 0 or pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)]
+  [set pcolor violet]
+  ask patches with [pxcor = round(0.23 * world-width)and pycor >= round(0.34 * world-height) and pycor <= round(0.36 * world-height)and(pzcor = 0 or pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)]
+  [set pcolor cyan]
+  ask patches with [pycor < round (0.1 * world-height) and pxcor <= round(0.23 * world-width) and pxcor >= round(0.07 * world-width)and(pzcor = 0 or pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)]
+  [set pcolor lime]
+  ask patches with [pxcor = round(0.23 * world-width)and pycor > round(0.05 * world-height) and pycor <= round(0.08 * world-height)and (pzcor = 0 or pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)]
+  [set pcolor orange]
+  ask patches with[pxcor >= round((0.23 + 0.25)/ 2 * world-width) + interval / 2 and pxcor < round(0.81 * world-width) and pycor < round(0.05 * world-height)and(pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)]
+  [set pcolor magenta]
+  ask patches with[pxcor > round(0.48 * world-width)and pxcor < round(0.78 * world-width) and pycor < round(0.06 * world-height) and pzcor = 0]
+  [set pcolor magenta]
+  ask patches with [pxcor = round(0.48 * world-width)and pycor <= round(0.06 * world-height)and pycor >= round(0.05 * world-height) and pzcor < interval]
+  [set pcolor 0]
+  ask patches with [pxcor = round(0.48 * world-width)and pycor <= round(0.06 * world-height)and pycor >= round(0.05 * world-height) and pzcor = 0]
+  [set pcolor turquoise]
+  ask patches with [pxcor > round(0.78 * world-width)and pycor < round(0.32 * world-height) and pzcor = 0]
+  [set pcolor yellow]
+  ask patches with [pxcor > round(0.82 * world-width)and pxcor <= round(0.84 * world-width) and pycor = round(0.32 * world-height) and pzcor < interval]
+  [set pcolor 0]
+  ask patches with[pxcor > round(0.82 * world-width)and pxcor <= round(0.84 * world-width) and pycor = round(0.32 * world-height) and pzcor = 0]
+  [set pcolor red]
+  ask patches with[pxcor > round(0.81 * world-width)and pycor = round(0.56 * world-height)and pzcor < interval]
+  [set pcolor wall-color]
+  ask patches with[pxcor > round(0.81 * world-width)and pxcor <= round(0.83 * world-width) and pycor = round(0.56 * world-height)and pzcor < interval]
+  [set pcolor 0]
+  ask patches with[pxcor > round(0.81 * world-width)and pxcor <= round(0.83 * world-width) and pycor = round(0.56 * world-height)and pzcor = 0]
+  [set pcolor red]
+  ask patches with [pxcor > round(0.81 * world-width)and pycor > round(0.56 * world-height)and pzcor = 0]
+  [set pcolor yellow]
+end
+to setup-stair
+   let middle round((0.48 + 0.78 )* world-width / 2)
+  ask patches with[pycor <= round(0.43 * world-height)  and pycor > round(0.43 * world-height) - stairs-width + 1 and pxcor > middle - 5 and pxcor < middle + 15 and pzcor > interval];;内部楼梯2层、3层
+  [set pcolor 0]
+  let i 1
+  while[i < 3]
+  [
+    let j 1
+    while[j <= interval]
+    [
+    ask patches with [pycor <= round(0.43 * world-height)  and pycor > round(0.43 * world-height) - stairs-width + 1 and pxcor = middle - 5 + j and pzcor = i  * interval + j]
+      [set pcolor white]
+      set j j + 1
+    ]
+    set i i + 1
+  ]
+  ask patches with [pxcor <= round(0.48 * world-width) and pxcor > round(0.48 * world-width) - big-stairs-width and pycor > round (0.2 * world-height) - 5 and pycor < round (0.4 * world-height) - 5 and pzcor = interval]
+  [set pcolor 0]
+  let j 1
+  while [j <= interval]
+  [
+    ask patches with [pxcor <= round(0.48 * world-width) and pxcor > round(0.48 * world-width) - big-stairs-width and pycor = round (0.2 * world-height) + j - 5 and pzcor = j]
+    [set pcolor white]
+    set j j + 1
+  ]
+  ask patches with [pycor > round(0.51 * world-height) and pycor < round(0.56 * world-height)and pxcor >= round(0.02 * world-width) and pxcor < round(0.12 * world-width)and pzcor >= interval];;左中
+  [set pcolor 0]
+  let temp round((round(0.51 * world-height)+ round(0.56 * world-height))/ 2 )
+  set i 1
+  while [i < 4]
+  [
+    set j 1
+    while[j <= interval / 2]
+    [
+    ask patches with [pycor < temp and pycor >= round(0.51 * world-height)+ 1 and pzcor = (2 * i - 1) * interval / 2 + j and pxcor = round(0.02 * world-width) + j  ]
+    [set pcolor white]
+    ask patches with [pycor <= round(0.56 * world-height) and pycor >= temp  and pzcor = 2 * (i - 1) * interval / 2 + j and pxcor = round(0.12 * world-width) - j]
+    [set pcolor white]
+      set j j + 1
+    ]
+    ask patches with [pxcor <= round(0.02 * world-width) and pycor >= round(0.51 * world-height) and pycor <= round(0.56 * world-height) and pzcor = (2 * i - 1) * interval / 2]
+    [set pcolor white]
+    set i i + 1
+  ]
+  ask patches with [pycor >= round(0.96 * world-height) and pxcor >= round(0.02 * world-width) and pxcor < round(0.12 * world-width)and pzcor >= interval];;左上
+  [set pcolor 0]
+  set i 1
+  while [i < 4]
+  [
+    set j 1
+    while[j <= interval / 2]
+    [
+    ask patches with [ pycor >= round(0.96 * world-height)and pycor < round(0.98 * world-height) and pzcor = (2 * i - 1) * interval / 2 + j and pxcor = round(0.02 * world-width) + j  ]
+    [set pcolor white]
+    ask patches with [ pycor >= round(0.98 * world-height)  and pzcor = 2 * (i - 1) * interval / 2 + j and pxcor = round(0.12 * world-width) - j]
+    [set pcolor white]
+      set j j + 1
+    ]
+    ask patches with [pxcor <= round(0.02 * world-width) and pycor >= round(0.96 * world-height) and pzcor = (2 * i - 1) * interval / 2]
+    [set pcolor white]
+    set i i + 1
+  ]
+  ask patches with [pycor <= round(0.04 * world-height) and pxcor > round((0.23 + 0.25)/ 2 * world-width) and pxcor < round((0.23 + 0.25)/ 2 * world-width) + interval / 2 and pzcor >= interval];;左下
+  [set pcolor 0]
+  set i 1
+  while [i < 4]
+  [
+    set j 1
+    while[j <= interval / 2]
+    [
+    ask patches with [ pycor > round(0.01 * world-height)and pycor <= round(0.03 * world-height) and pzcor = (2 * i - 1) * interval / 2 + j and pxcor = round((0.23 + 0.25)/ 2 * world-width) + interval / 2 - j  ]
+    [set pcolor white]
+    ask patches with [ pycor <= round(0.01 * world-height) and pzcor = 2 * (i - 1) * interval / 2 + j and pxcor = round((0.23 + 0.25)/ 2 * world-width) + j]
+    [set pcolor white]
+      set j j + 1
+    ]
+    ask patches with [pxcor >= round((0.23 + 0.25)/ 2 * world-width) + 10 and pxcor <= round((0.23 + 0.25)/ 2 * world-width) + interval / 2 + round(0.01 * world-width)  and pycor <= round(0.03 * world-height) and pzcor = (2 * i - 1) * interval / 2]
+    [set pcolor white]
+    set i i + 1
+  ]
+  ask patches with [pycor >= round(0.96 * world-height) and pxcor >= round(0.83 * world-width) and pxcor < round(0.83 * world-width) + interval / 2 and pzcor >= interval];;右上
+  [set pcolor 0]
+  set i 1
+  while [i < 4]
+  [
+    set j 1
+    while[j <= interval / 2]
+    [
+    ask patches with [ pycor >= round(0.96 * world-height)and pycor < round(0.98 * world-height) and pzcor = (2 * i - 1) * interval / 2 + j and pxcor = round(0.83 * world-width) + j  ]
+    [set pcolor white]
+    ask patches with [ pycor >= round(0.98 * world-height)  and pzcor = 2 * (i - 1) * interval / 2 + j and pxcor = round(0.83 * world-width) + interval / 2 - j]
+    [set pcolor white]
+      set j j + 1
+    ]
+    ask patches with [pxcor > round(0.81 * world-width) and pxcor <= round(0.83 * world-width)  and pycor >= round(0.96 * world-height) and pzcor = (2 * i - 1) * interval / 2]
+    [set pcolor white]
+    set i i + 1
+  ]
+end
+to setup-stair-color
+  let middle round((0.48 + 0.78 )* world-width / 2)
+  let temp round((round(0.51 * world-height)+ round(0.56 * world-height))/ 2 )
+  ask patches with [pycor <= round(0.43 * world-height)  and pycor > round(0.43 * world-height) - stairs-width + 1 and pxcor = middle - 5 + interval and (pzcor = 2  * interval or pzcor = 3  * interval)];;内部
+  [set pcolor pink]
+  ask patches with [pxcor <= round(0.48 * world-width) and pxcor > round(0.48 * world-width) - big-stairs-width and pycor = round (0.2 * world-height) + interval - 5 and pzcor = interval]
+  [set pcolor pink]
+  ask patches with [ pycor >= round(0.96 * world-height)and pycor < round(0.98 * world-height)and pxcor = round(0.02 * world-width) + interval / 2 and ( pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval) ];;左上
+  [set pcolor green]
+  ask patches with [pycor < temp and pycor >= round(0.51 * world-height)+ 1 and pxcor = round(0.02 * world-width) + interval / 2 and ( pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval) ];;左中
+  [set pcolor pink]
+  ask patches with [ pycor > round(0.01 * world-height)and pycor <= round(0.03 * world-height) and pxcor = round((0.23 + 0.25)/ 2 * world-width) + interval / 2 - interval / 2  and ( pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)];;左下
+  [set pcolor pink]
+  ask patches with [ pycor >= round(0.96 * world-height)and pycor < round(0.98 * world-height)  and pxcor = round(0.83 * world-width) + interval / 2  and ( pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)];;右上
+  [set pcolor red]
+  ask patches with [ pycor >= round(0.98 * world-height)  and pxcor = round(0.83 * world-width) + interval / 2  and pzcor = 3 * interval];;右上
+  [set pcolor blue]
+  ask patches with [pxcor <= round(0.48 * world-width) and pxcor > round(0.48 * world-width) - big-stairs-width and pycor = round (0.2 * world-height) + 1 - 5 and pzcor = 0]
+  [set pcolor blue]
+  ask patches with [pxcor = round(0.48 * world-width) + 1  and pycor > round (0.2 * world-height) - 5 and pycor < round (0.4 * world-height) - 5 + 1 and pzcor = interval]
+  [set pcolor blue]
+  ask patches with [pxcor = round(0.48 * world-width) + 1 - big-stairs-width  and pycor > round (0.4 * world-height) - 5 + 1 - 5 and pycor < round (0.4 * world-height) - 5 + 1 and pzcor = interval]
+  [set pcolor blue]
+  ask patches with [ pycor >= round(0.98 * world-height)  and pzcor = 0 and pxcor = round(0.12 * world-width) - 1];;左上
+  [set pcolor blue]
+  ask patches with [pycor <= round(0.56 * world-height) and pycor >= temp  and pzcor = 0 and pxcor = round(0.12 * world-width) - 1 ];;左中
+    [set pcolor blue]
+  ask patches with [ pycor <= round(0.01 * world-height) and pzcor = 0 and pxcor = round((0.23 + 0.25)/ 2 * world-width) + 1];;左下
+    [set pcolor blue]
+  ask patches with [ pycor >= round(0.98 * world-height)  and pzcor = 0 and pxcor = round(0.83 * world-width) + interval / 2 - 1];;右上
+    [set pcolor blue]
+  let righter round(exit-width / 2)
+  let lefter  round(exit-width / 2) - exit-width
+  let middle2 round((0.23 + 0.43) * world-width / 2)
+  ask patches with[pycor = 0 and pxcor > middle2 + lefter and pxcor < middle2 + righter and pzcor = 0]
+  [set pcolor pink]
+end
+to setup-barrier
+
+  let i 1
+  while[i <= 16]
+  [
+    let j 1
+  while[j <= 3]
+  [
+  ask patches with [pxcor > round(0.81 * world-width)and pxcor < round(0.90 * world-width) and pycor = 2 * i and pzcor >= j * interval and pzcor < j * interval + 5 ] ;;书架
+  [set pcolor 33]
+    set j j + 1
+  ]
+    set i i + 1
+  ]
+  let j 1
+
+  while[j <= 3]
+  [
+    set i 1
+  while[i <= 22]
+  [
+   ask patches with [pxcor > round(0.81 * world-width)and pxcor < round(0.90 * world-width) and pycor = 2 * i + 45 and pzcor >= j * interval and pzcor < j * interval + 5] ;;书架
+  [set pcolor 33]
+    set i i + 1
+  ]
+  set j j + 1
+ ]
+  set j 1
+
+  while[j <= 3]
+  [
+    set i 1
+  while[i <= 23]
+  [
+  ask patches with [pxcor > round(0.93 * world-width)and pycor = 4 * i and pzcor >= j * interval and pzcor < j * interval + 5] ;;书桌
+      [set pcolor 22]
+    set i i + 1
+  ]
+  set j j + 1
+ ]
+
+end
+to setup-population
+  ask n-of populations-f1 patches with [pcolor = yellow and pxcor > round(0.90 * world-width)]
+  [sprout 1
+   [
+    set shape "person"
+    set size 2
+    set color orange
+    set down? false
+   ;set ycor ycor + 1
+  ]
+  ]
+  ask n-of populations-f2 patches with [pcolor = yellow and pxcor > round(0.90 * world-width)]
+  [sprout 1
+   [
+    set shape "person"
+    set size 2
+    set color orange
+    set down? false
+   ;set ycor ycor + 1
+  ]
+  ]
+  ask n-of populations-f3 patches with [pcolor = yellow and pxcor > round(0.90 * world-width)]
+  [sprout 1
+    [
+    set shape "person"
+    set size 2
+    set color orange
+    set down? false
+   ;set ycor ycor + 1
+  ]
+  ]
+  ask n-of populations-f4 patches with [pcolor = yellow and pxcor > round(0.90 * world-width)]
+  [sprout 1
+   [
+    set shape "person"
+    set size 2
+    set color orange
+    set down? false
+   ;set ycor ycor + 1
+  ]
+  ]
+  ask n-of round(populations-corridor / 4) patches with [(pcolor = white or pcolor = brown or pcolor = violet or pcolor = lime or pcolor = magenta) and (pzcor = 0 and pzcor = interval or pzcor = 2 * interval or pzcor = 3 * interval)]
+  [sprout 1
+    [
+    set shape "person"
+    set size 2
+    set color orange
+    set down? false
+   ;set ycor ycor + 1
+  ]
+  ]
+  ask turtles
+  [set inside-stair? false]
+end
+to calculate-dis
+   ask patches with [pcolor = 0 or pcolor = blue or pcolor = 33 or pcolor = 22]
+  [set elevation infinite
+  set altitude infinite]
+  ask patches with [pxcor > round(0.81 * world-width)and pxcor < round(0.90 * world-width) and pycor < round(0.34 * world-height) and pzcor >=  interval  ] ;;书架
+  [set elevation infinite
+  set altitude infinite]
+  ask patches with [pxcor > round(0.81 * world-width)and pxcor < round(0.90 * world-width) and pycor > round(0.45 * world-height) and pycor < round(0.88 * world-height) and pzcor >=  interval  ] ;;书架
+  [set elevation infinite
+  set altitude infinite]
+  ask patches with[pycor = world-height - 1 and pzcor = 0]
+  [set altitude infinite]
+  ask patches with [pxcor > round(0.48 * world-width) and pycor = 0 and pzcor = 0]
+  [set altitude infinite]
+  ;;计算距离门口的距离
+  let i 0
+  while[i <= 3]
+  [
+  ask patches with [pcolor = yellow and pzcor = i * interval and altitude = 0 ]
+  [
+    set alist[]
+    ask patches with [pcolor = red and pzcor = i * interval]
+    [set alist lput distance-nowrap myself alist]
+    set altitude min alist
+  ]
+  set i i + 1
+]
+
+  set i 0
+  while[i <= 3]
+  [
+  ask patches with [pcolor = brown and pzcor = i * interval]
+  [
+    set alist[]
+    ask patches with [pcolor = green and pzcor = i * interval]
+    [set alist lput distance-nowrap myself alist]
+    set altitude min alist
+  ]
+  set i i + 1
+]
+ set i 0
+  while[i <= 3]
+  [
+  ask patches with [pcolor = violet and pzcor = i * interval]
+  [
+    set alist[]
+    ask patches with [pcolor = cyan and pzcor = i * interval]
+    [set alist lput distance-nowrap myself alist]
+    set altitude min alist
+  ]
+  set i i + 1
+]
+  set i 0
+  while[i <= 3]
+  [
+  ask patches with [pcolor = lime and pzcor = i * interval]
+  [
+    set alist[]
+    ask patches with [pcolor = orange and pzcor = i * interval]
+    [set alist lput distance-nowrap myself alist]
+    set altitude min alist
+  ]
+  set i i + 1
+]
+  set i 1
+  while[i <= 3]
+  [
+  ask patches with [pcolor = magenta and pzcor = i * interval]
+  [
+    set alist[]
+    ask patches with [pcolor = turquoise and pzcor = i * interval]
+    [set alist lput distance-nowrap myself alist]
+    set altitude min alist
+  ]
+  set i i + 1
+]
+  ;;计算距离楼梯口的距离(楼梯口颜色为pink)
+  set i 0
+  while[i <= 3]
+  [
+  ask patches with [(pcolor = white or pcolor = red or pcolor = green or pcolor = cyan or pcolor = orange or pcolor = turquoise) and pzcor = i * interval]
+  [
+    set alist[]
+    ask patches with [pcolor = pink and pzcor = i * interval]
+    [set alist lput distance-nowrap myself alist]
+    set elevation min alist
+  ]
+  set i i + 1
+]
+ ;;计算距离左中和左下楼梯口距离
+  ;set i 1
+  ;while[i <= 3]
+  ;[
+  ;ask patches with [pcolor = white  and pzcor = i * interval];左中
+  ;[
+    ;set alist[]
+    ;ask patches with [pcolor = pink and pxcor = round(0.02 * world-width) + interval / 2 and pzcor = i * interval]
+    ;[set alist lput distance-nowrap myself alist]
+    ;set elevation1 min alist
+  ;]
+  ;set i i + 1
+;]
+  ;set i 1
+  ;while[i <= 3]
+  ;[
+  ;ask patches with [pcolor = white and pxcor = round((0.23 + 0.25)/ 2 * world-width) and pzcor = i * interval];左下
+  ;[
+    ;set alist[]
+    ;ask patches with [pcolor = pink and pxcor = round(0.02 * world-width) + interval / 2 and pzcor = i * interval]
+    ;[set alist lput distance-nowrap myself alist]
+    ;set elevation1 min alist
+  ;]
+  ;set i i + 1
+;]
+end
+to choose-stair
+  if left-middle-stair?
+  [ let i 1
+    while[i <= 3]
+    [
+      ask n-of (per-lms * (count turtles with [pzcor = i * interval]) / 100) turtles with [pzcor = i * interval ];;left-middle-stair
+    [set lm? true]
+     ]
+  ]
+  if left-lower-stair?
+ [ let i 1
+    while[i <= 3]
+    [
+      ask n-of (per-lls * (count turtles with [pzcor = i * interval]) / 100) turtles with [pzcor = i * interval ];;left-lower-stair
+    [set ll? true]
+     ]
+  ]
+end
+
+to test
+ let i 0
+  while[i <= 3]
+  [
+  ask patches with [pcolor = violet and pzcor = i * interval]
+  [
+    set alist[]
+    ask patches with [pcolor = cyan and pzcor = i * interval]
+    [set alist lput distance-nowrap myself alist]
+    set altitude min alist
+  ]
+  set i i + 1
+]
+end
+@#$#@#$#@
+GRAPHICS-WINDOW
+0
+0
+1321
+1296
+-1
+-1
+13.0
+1
+10
+1
+1
+1
+0
+1
+1
+1
+0
+100
+0
+98
+0
+80
+1
+0
+1
+ticks
+30.0
+
+BUTTON
+32
+37
+98
+70
+NIL
+setup
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+13
+102
+187
+135
+reading-room-width
+reading-room-width
+0
+10
+5.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+13
+158
+185
+191
+stairs-width
+stairs-width
+0
+10
+3.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+13
+213
+185
+246
+big-stairs-width
+big-stairs-width
+0
+14
+6.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+14
+265
+186
+298
+down-stair-speed
+down-stair-speed
+0.1
+10
+4.0
+0.1
+1
+NIL
+HORIZONTAL
+
+BUTTON
+126
+38
+189
+71
+NIL
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+242
+102
+414
+135
+populations-f1
+populations-f1
+0
+300
+80.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+242
+160
+414
+193
+populations-f2
+populations-f2
+0
+300
+200.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+243
+213
+415
+246
+populations-f3
+populations-f3
+0
+300
+200.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+242
+265
+414
+298
+populations-f4
+populations-f4
+0
+300
+200.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+13
+336
+185
+369
+exit-width
+exit-width
+0
+10
+5.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+245
+320
+433
+353
+populations-corridor
+populations-corridor
+0
+200
+100.0
+1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+513
+10
+644
+55
+total-populations
+populations-f1 + populations-f2 + populations-f3 + populations-f4 + populations-corridor
+17
+1
+11
+
+PLOT
+770
+10
+1074
+156
+average-speed
+time
+speed
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"average-speed" 1.0 0 -16777216 true "" "plot 100 * move-speed"
+
+PLOT
+771
+169
+1073
+319
+population per floor
+time
+population
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"f1" 1.0 0 -10873583 true "" "plot count turtles with [zcor = 0]"
+"f2" 1.0 0 -7500403 true "" "plot count turtles with [zcor = interval]"
+"f3" 1.0 0 -14454117 true "" "plot count turtles with [zcor = 2 * interval]"
+"f4" 1.0 0 -4757638 true "" "plot count turtles with [zcor = 3 * interval]"
+
+BUTTON
+339
+11
+460
+44
+NIL
+test
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+11
+384
+183
+417
+exit-width2
+exit-width2
+0
+5
+3.0
+1
+1
+NIL
+HORIZONTAL
+
+TEXTBOX
+285
+24
+336
+42
+测试按钮
+12
+0.0
+1
+
+SWITCH
+472
+193
+575
+226
+exit2?
+exit2?
+1
+1
+-1000
+
+SWITCH
+473
+238
+662
+271
+left-middle-stair?
+left-middle-stair?
+1
+1
+-1000
+
+SWITCH
+473
+286
+648
+319
+left-lower-stair?
+left-lower-stair?
+1
+1
+-1000
+
+SLIDER
+247
+370
+419
+403
+per-lms
+per-lms
+0
+100
+20.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+248
+414
+420
+447
+per-lls
+per-lls
+0
+100
+10.0
+1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+513
+59
+588
+104
+NIL
+nu-floor4
+17
+1
+11
+
+MONITOR
+593
+59
+668
+104
+NIL
+nu-floor3
+17
+1
+11
+
+MONITOR
+513
+113
+588
+158
+NIL
+nu-floor2
+17
+1
+11
+
+PLOT
+772
+334
+1072
+484
+popu-area
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"fl2" 1.0 0 -16777216 true "" "plot nu-floor2"
+"fl3" 1.0 0 -7500403 true "" "plot nu-floor3"
+"fl4" 1.0 0 -2674135 true "" "plot nu-floor4"
+
+MONITOR
+596
+114
+720
+159
+average-speed
+move-speed * 100
+17
+1
+11
+
+SLIDER
+14
+301
+186
+334
+admission
+admission
+1
+5
+2.0
+1
+1
+NIL
+HORIZONTAL
+
+@#$#@#$#@
+## WHAT IS IT?
+
+(a general understanding of what the model is trying to show or explain)
+
+## HOW IT WORKS
+
+(what rules the agents use to create the overall behavior of the model)
+
+## HOW TO USE IT
+
+(how to use the model, including a description of each of the items in the Interface tab)
+
+## THINGS TO NOTICE
+
+(suggested things for the user to notice while running the model)
+
+## THINGS TO TRY
+
+(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+
+## EXTENDING THE MODEL
+
+(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+
+## NETLOGO FEATURES
+
+(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
+
+## RELATED MODELS
+
+(models in the NetLogo Models Library and elsewhere which are of related interest)
+
+## CREDITS AND REFERENCES
+
+(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+@#$#@#$#@
+default
+true
+0
+Polygon -7500403 true true 150 5 40 250 150 205 260 250
+
+airplane
+true
+0
+Polygon -7500403 true true 150 0 135 15 120 60 120 105 15 165 15 195 120 180 135 240 105 270 120 285 150 270 180 285 210 270 165 240 180 180 285 195 285 165 180 105 180 60 165 15
+
+arrow
+true
+0
+Polygon -7500403 true true 150 0 0 150 105 150 105 293 195 293 195 150 300 150
+
+box
+false
+0
+Polygon -7500403 true true 150 285 285 225 285 75 150 135
+Polygon -7500403 true true 150 135 15 75 150 15 285 75
+Polygon -7500403 true true 15 75 15 225 150 285 150 135
+Line -16777216 false 150 285 150 135
+Line -16777216 false 150 135 15 75
+Line -16777216 false 150 135 285 75
+
+bug
+true
+0
+Circle -7500403 true true 96 182 108
+Circle -7500403 true true 110 127 80
+Circle -7500403 true true 110 75 80
+Line -7500403 true 150 100 80 30
+Line -7500403 true 150 100 220 30
+
+butterfly
+true
+0
+Polygon -7500403 true true 150 165 209 199 225 225 225 255 195 270 165 255 150 240
+Polygon -7500403 true true 150 165 89 198 75 225 75 255 105 270 135 255 150 240
+Polygon -7500403 true true 139 148 100 105 55 90 25 90 10 105 10 135 25 180 40 195 85 194 139 163
+Polygon -7500403 true true 162 150 200 105 245 90 275 90 290 105 290 135 275 180 260 195 215 195 162 165
+Polygon -16777216 true false 150 255 135 225 120 150 135 120 150 105 165 120 180 150 165 225
+Circle -16777216 true false 135 90 30
+Line -16777216 false 150 105 195 60
+Line -16777216 false 150 105 105 60
+
+car
+false
+0
+Polygon -7500403 true true 300 180 279 164 261 144 240 135 226 132 213 106 203 84 185 63 159 50 135 50 75 60 0 150 0 165 0 225 300 225 300 180
+Circle -16777216 true false 180 180 90
+Circle -16777216 true false 30 180 90
+Polygon -16777216 true false 162 80 132 78 134 135 209 135 194 105 189 96 180 89
+Circle -7500403 true true 47 195 58
+Circle -7500403 true true 195 195 58
+
+circle
+false
+0
+Circle -7500403 true true 0 0 300
+
+circle 2
+false
+0
+Circle -7500403 true true 0 0 300
+Circle -16777216 true false 30 30 240
+
+cow
+false
+0
+Polygon -7500403 true true 200 193 197 249 179 249 177 196 166 187 140 189 93 191 78 179 72 211 49 209 48 181 37 149 25 120 25 89 45 72 103 84 179 75 198 76 252 64 272 81 293 103 285 121 255 121 242 118 224 167
+Polygon -7500403 true true 73 210 86 251 62 249 48 208
+Polygon -7500403 true true 25 114 16 195 9 204 23 213 25 200 39 123
+
+cylinder
+false
+0
+Circle -7500403 true true 0 0 300
+
+dot
+false
+0
+Circle -7500403 true true 90 90 120
+
+face happy
+false
+0
+Circle -7500403 true true 8 8 285
+Circle -16777216 true false 60 75 60
+Circle -16777216 true false 180 75 60
+Polygon -16777216 true false 150 255 90 239 62 213 47 191 67 179 90 203 109 218 150 225 192 218 210 203 227 181 251 194 236 217 212 240
+
+face neutral
+false
+0
+Circle -7500403 true true 8 7 285
+Circle -16777216 true false 60 75 60
+Circle -16777216 true false 180 75 60
+Rectangle -16777216 true false 60 195 240 225
+
+face sad
+false
+0
+Circle -7500403 true true 8 8 285
+Circle -16777216 true false 60 75 60
+Circle -16777216 true false 180 75 60
+Polygon -16777216 true false 150 168 90 184 62 210 47 232 67 244 90 220 109 205 150 198 192 205 210 220 227 242 251 229 236 206 212 183
+
+fish
+false
+0
+Polygon -1 true false 44 131 21 87 15 86 0 120 15 150 0 180 13 214 20 212 45 166
+Polygon -1 true false 135 195 119 235 95 218 76 210 46 204 60 165
+Polygon -1 true false 75 45 83 77 71 103 86 114 166 78 135 60
+Polygon -7500403 true true 30 136 151 77 226 81 280 119 292 146 292 160 287 170 270 195 195 210 151 212 30 166
+Circle -16777216 true false 215 106 30
+
+flag
+false
+0
+Rectangle -7500403 true true 60 15 75 300
+Polygon -7500403 true true 90 150 270 90 90 30
+Line -7500403 true 75 135 90 135
+Line -7500403 true 75 45 90 45
+
+flower
+false
+0
+Polygon -10899396 true false 135 120 165 165 180 210 180 240 150 300 165 300 195 240 195 195 165 135
+Circle -7500403 true true 85 132 38
+Circle -7500403 true true 130 147 38
+Circle -7500403 true true 192 85 38
+Circle -7500403 true true 85 40 38
+Circle -7500403 true true 177 40 38
+Circle -7500403 true true 177 132 38
+Circle -7500403 true true 70 85 38
+Circle -7500403 true true 130 25 38
+Circle -7500403 true true 96 51 108
+Circle -16777216 true false 113 68 74
+Polygon -10899396 true false 189 233 219 188 249 173 279 188 234 218
+Polygon -10899396 true false 180 255 150 210 105 210 75 240 135 240
+
+house
+false
+0
+Rectangle -7500403 true true 45 120 255 285
+Rectangle -16777216 true false 120 210 180 285
+Polygon -7500403 true true 15 120 150 15 285 120
+Line -16777216 false 30 120 270 120
+
+leaf
+false
+0
+Polygon -7500403 true true 150 210 135 195 120 210 60 210 30 195 60 180 60 165 15 135 30 120 15 105 40 104 45 90 60 90 90 105 105 120 120 120 105 60 120 60 135 30 150 15 165 30 180 60 195 60 180 120 195 120 210 105 240 90 255 90 263 104 285 105 270 120 285 135 240 165 240 180 270 195 240 210 180 210 165 195
+Polygon -7500403 true true 135 195 135 240 120 255 105 255 105 285 135 285 165 240 165 195
+
+line
+true
+0
+Line -7500403 true 150 0 150 300
+
+line half
+true
+0
+Line -7500403 true 150 0 150 150
+
+pentagon
+false
+0
+Polygon -7500403 true true 150 15 15 120 60 285 240 285 285 120
+
+person
+false
+0
+Circle -7500403 true true 110 5 80
+Polygon -7500403 true true 105 90 120 195 90 285 105 300 135 300 150 225 165 300 195 300 210 285 180 195 195 90
+Rectangle -7500403 true true 127 79 172 94
+Polygon -7500403 true true 195 90 240 150 225 180 165 105
+Polygon -7500403 true true 105 90 60 150 75 180 135 105
+
+plant
+false
+0
+Rectangle -7500403 true true 135 90 165 300
+Polygon -7500403 true true 135 255 90 210 45 195 75 255 135 285
+Polygon -7500403 true true 165 255 210 210 255 195 225 255 165 285
+Polygon -7500403 true true 135 180 90 135 45 120 75 180 135 210
+Polygon -7500403 true true 165 180 165 210 225 180 255 120 210 135
+Polygon -7500403 true true 135 105 90 60 45 45 75 105 135 135
+Polygon -7500403 true true 165 105 165 135 225 105 255 45 210 60
+Polygon -7500403 true true 135 90 120 45 150 15 180 45 165 90
+
+sheep
+false
+15
+Circle -1 true true 203 65 88
+Circle -1 true true 70 65 162
+Circle -1 true true 150 105 120
+Polygon -7500403 true false 218 120 240 165 255 165 278 120
+Circle -7500403 true false 214 72 67
+Rectangle -1 true true 164 223 179 298
+Polygon -1 true true 45 285 30 285 30 240 15 195 45 210
+Circle -1 true true 3 83 150
+Rectangle -1 true true 65 221 80 296
+Polygon -1 true true 195 285 210 285 210 240 240 210 195 210
+Polygon -7500403 true false 276 85 285 105 302 99 294 83
+Polygon -7500403 true false 219 85 210 105 193 99 201 83
+
+square
+false
+0
+Rectangle -7500403 true true 30 30 270 270
+
+square 2
+false
+0
+Rectangle -7500403 true true 30 30 270 270
+Rectangle -16777216 true false 60 60 240 240
+
+star
+false
+0
+Polygon -7500403 true true 151 1 185 108 298 108 207 175 242 282 151 216 59 282 94 175 3 108 116 108
+
+target
+false
+0
+Circle -7500403 true true 0 0 300
+Circle -16777216 true false 30 30 240
+Circle -7500403 true true 60 60 180
+Circle -16777216 true false 90 90 120
+Circle -7500403 true true 120 120 60
+
+tree
+false
+0
+Circle -7500403 true true 118 3 94
+Rectangle -6459832 true false 120 195 180 300
+Circle -7500403 true true 65 21 108
+Circle -7500403 true true 116 41 127
+Circle -7500403 true true 45 90 120
+Circle -7500403 true true 104 74 152
+
+triangle
+false
+0
+Polygon -7500403 true true 150 30 15 255 285 255
+
+triangle 2
+false
+0
+Polygon -7500403 true true 150 30 15 255 285 255
+Polygon -16777216 true false 151 99 225 223 75 224
+
+truck
+false
+0
+Rectangle -7500403 true true 4 45 195 187
+Polygon -7500403 true true 296 193 296 150 259 134 244 104 208 104 207 194
+Rectangle -1 true false 195 60 195 105
+Polygon -16777216 true false 238 112 252 141 219 141 218 112
+Circle -16777216 true false 234 174 42
+Rectangle -7500403 true true 181 185 214 194
+Circle -16777216 true false 144 174 42
+Circle -16777216 true false 24 174 42
+Circle -7500403 false true 24 174 42
+Circle -7500403 false true 144 174 42
+Circle -7500403 false true 234 174 42
+
+turtle
+true
+0
+Polygon -10899396 true false 215 204 240 233 246 254 228 266 215 252 193 210
+Polygon -10899396 true false 195 90 225 75 245 75 260 89 269 108 261 124 240 105 225 105 210 105
+Polygon -10899396 true false 105 90 75 75 55 75 40 89 31 108 39 124 60 105 75 105 90 105
+Polygon -10899396 true false 132 85 134 64 107 51 108 17 150 2 192 18 192 52 169 65 172 87
+Polygon -10899396 true false 85 204 60 233 54 254 72 266 85 252 107 210
+Polygon -7500403 true true 119 75 179 75 209 101 224 135 220 225 175 261 128 261 81 224 74 135 88 99
+
+wheel
+false
+0
+Circle -7500403 true true 3 3 294
+Circle -16777216 true false 30 30 240
+Line -7500403 true 150 285 150 15
+Line -7500403 true 15 150 285 150
+Circle -7500403 true true 120 120 60
+Line -7500403 true 216 40 79 269
+Line -7500403 true 40 84 269 221
+Line -7500403 true 40 216 269 79
+Line -7500403 true 84 40 221 269
+
+wolf
+false
+0
+Polygon -16777216 true false 253 133 245 131 245 133
+Polygon -7500403 true true 2 194 13 197 30 191 38 193 38 205 20 226 20 257 27 265 38 266 40 260 31 253 31 230 60 206 68 198 75 209 66 228 65 243 82 261 84 268 100 267 103 261 77 239 79 231 100 207 98 196 119 201 143 202 160 195 166 210 172 213 173 238 167 251 160 248 154 265 169 264 178 247 186 240 198 260 200 271 217 271 219 262 207 258 195 230 192 198 210 184 227 164 242 144 259 145 284 151 277 141 293 140 299 134 297 127 273 119 270 105
+Polygon -7500403 true true -1 195 14 180 36 166 40 153 53 140 82 131 134 133 159 126 188 115 227 108 236 102 238 98 268 86 269 92 281 87 269 103 269 113
+
+x
+false
+0
+Polygon -7500403 true true 270 75 225 30 30 225 75 270
+Polygon -7500403 true true 30 75 75 30 270 225 225 270
+@#$#@#$#@
+NetLogo 3D 6.2.0
+@#$#@#$#@
+need-to-manually-make-preview-for-this-model
+@#$#@#$#@
+@#$#@#$#@
+<experiments>
+  <experiment name="experiment" repetitions="10" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>ticks = 1200</exitCondition>
+    <metric>ticks</metric>
+    <metric>count turtles with [pzcor = 0]</metric>
+    <metric>count turtles with [pzcor = 20]</metric>
+    <metric>count turtles with [pzcor = 40]</metric>
+    <metric>count turtles with [pzcor = 60]</metric>
+    <metric>nu-floor2</metric>
+    <metric>nu-floor3</metric>
+    <metric>nu-floor4</metric>
+    <metric>move-speed</metric>
+    <steppedValueSet variable="per-lls" first="10" step="5" last="20"/>
+    <enumeratedValueSet variable="reading-room-width">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="populations-f1">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="populations-f2" first="200" step="50" last="300"/>
+    <steppedValueSet variable="per-lms" first="20" step="5" last="30"/>
+    <enumeratedValueSet variable="left-lower-stair?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="down-stair-speed" first="4" step="1" last="8"/>
+    <steppedValueSet variable="populations-f3" first="200" step="50" last="300"/>
+    <enumeratedValueSet variable="stairs-width">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="populations-corridor" first="50" step="50" last="100"/>
+    <enumeratedValueSet variable="big-stairs-width">
+      <value value="7"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="left-middle-stair?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="exit2?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="populations-f4" first="200" step="50" last="300"/>
+    <steppedValueSet variable="exit-width" first="5" step="1" last="9"/>
+    <enumeratedValueSet variable="exit-width2">
+      <value value="3"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="test-variance" repetitions="20" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>ticks = 1200</exitCondition>
+    <metric>ticks</metric>
+    <metric>count turtles with[zcor = 0]</metric>
+    <metric>count turtles with[zcor = 20]</metric>
+    <metric>count turtles with[zcor = 40]</metric>
+    <metric>count turtles with[zcor = 60]</metric>
+    <metric>nu-floor2</metric>
+    <metric>nu-floor3</metric>
+    <metric>nu-floor4</metric>
+    <metric>move-speed</metric>
+    <enumeratedValueSet variable="per-lls">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="reading-room-width">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="populations-f1">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="populations-f2">
+      <value value="203"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="per-lms">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="left-lower-stair?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="down-stair-speed">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="populations-f3">
+      <value value="200"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="stairs-width">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="populations-corridor">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="big-stairs-width">
+      <value value="7"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="left-middle-stair?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="exit2?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="populations-f4">
+      <value value="200"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="exit-width">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="exit-width2">
+      <value value="3"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="experiment-library" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>ticks = 1500</exitCondition>
+    <metric>ticks</metric>
+    <metric>move-speed * 100</metric>
+    <enumeratedValueSet variable="per-lls">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="reading-room-width">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="populations-f1">
+      <value value="80"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="populations-f2">
+      <value value="200"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="per-lms">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="left-lower-stair?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="down-stair-speed">
+      <value value="0.9"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="populations-f3">
+      <value value="200"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="admission">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="stairs-width">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="populations-corridor">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="big-stairs-width">
+      <value value="6"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="left-middle-stair?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="exit2?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="populations-f4">
+      <value value="200"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="exit-width">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="exit-width2">
+      <value value="3"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
+@#$#@#$#@
+@#$#@#$#@
+default
+0.0
+-0.2 0 0.0 1.0
+0.0 1 1.0 0.0
+0.2 0 0.0 1.0
+link direction
+true
+0
+Line -7500403 true 150 150 90 180
+Line -7500403 true 150 150 210 180
+@#$#@#$#@
+0
+@#$#@#$#@
