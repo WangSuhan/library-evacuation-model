@@ -12,6 +12,7 @@ and this is just one part of the evacuation modeling,
 I think the simulation using this model, and analyze the data to teach is easy, 
 so did not upload the hypothesis test. Also, please note that due to some incompatibilities between NETLOGO versions, 
 be sure to use NetLogo3D6.1.1, otherwise you may need to debug the code several times to run it.
-
+`Install`
+---------
 
  
