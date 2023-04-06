@@ -11,3 +11,8 @@ NETLOGO is a a multi-agent programmable modeling environment, and is devloped by
  * To install `NetLogo3D6.1.1`,please visit https://ccl.northwestern.edu/netlogo/
  
  * To learn more about Netlogo, refer to `An Introduction to Agent-Based Modeling: Modeling Natural, Social, and Engineered Complex Systems with NetLogo`,you can have a deeper understanding about modeling after reading this book. 
+
+How to build a model
+--------
+There are three kinds of agents in Netlogo, turltes, patches and observers. turtles can move in the environment, but patches cannot. Obervers can give turtles and patches orders. you can create different viriables for differents agents, and agents can access these virables.
+To build the model of library, you can set different patches to different colors.
