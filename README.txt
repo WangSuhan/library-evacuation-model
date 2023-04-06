@@ -1,5 +1,9 @@
+Modeling of library flow evacuation
+====
+Background
+----------
 This is part of my undergraduate graduation thesis.
- I used cellular automata method to realize pedestrian evacuation simulation in the library, 
+Cellular automata method was used to realize pedestrian evacuation simulation in the library, 
 which is one of my undergraduate school. 
 After completion of the simulation, 
 the way I use hypothesis test about the structure of the library in the design of evacuation escape ability check, 
