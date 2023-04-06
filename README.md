@@ -25,3 +25,9 @@ The library is divided into different parts, so that turtles can access the colo
 Algorithm
 ---------
 This is a classical evacuation algorithm. In a two-dimensional scenario, calculate the distance from each patch to the exit, and store this number in each patch, when turtle arrive the patch, it can get the number, and also the number around it. Then the turtle make a dicision according to this number about next patch it can go. Refer to the following figure:
+
+![image](https://github.com/WangSuhan/library-evacuation-model/blob/master/picture2.png)
+
+Others
+-------
+The attraction of this modeling approach is that, with careful design, it is possible to observe emergent phenomena that reveal underlying physical laws.The three-body problem is very popular these days, maybe you can use Netlogo simulation, you can draw the trajectories of three stars to observe.
